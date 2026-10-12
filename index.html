@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-Based Smart Retransmission Simulator</title>
+<style>
+:root{--navy:#172554;--blue:#2563eb;--pale:#eff6ff;--ink:#172033;--muted:#64748b;--green:#15803d;--orange:#c2410c;--border:#dbe3ef}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;color:var(--ink);line-height:1.45}
+header{background:linear-gradient(120deg,#172554,#1d4ed8);color:white;padding:26px 20px}
+header .wrap,main{max-width:1100px;margin:auto}h1{font-size:clamp(24px,4vw,36px);margin:0 0 8px}header p{margin:0;color:#dbeafe}
+main{padding:20px 14px 42px}.grid{display:grid;grid-template-columns: minmax(260px,330px) 1fr;gap:16px}
+.card{background:white;border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:0 3px 12px #0f172a08;margin-bottom:16px}
+h2{font-size:19px;margin:0 0 13px;color:#1e3a8a}h3{font-size:16px;margin:0 0 8px}
+label{display:block;font-weight:700;font-size:14px;margin:15px 0 5px}input[type=range]{width:100%;accent-color:var(--blue)}.value{float:right;color:var(--blue);font-weight:700}
+button{border:0;background:var(--blue);color:white;padding:11px 15px;border-radius:9px;font-weight:700;cursor:pointer;margin:8px 6px 0 0}button.secondary{background:#e2e8f0;color:#1e293b}button:hover{filter:brightness(.96)}
+.note{font-size:13px;color:var(--muted)}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.metric{background:#f8fafc;border:1px solid var(--border);padding:12px;border-radius:10px}.metric .n{font-size:22px;font-weight:800;color:#1d4ed8}.metric .t{font-size:12px;color:var(--muted)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:12px}.method{border:1px solid var(--border);border-radius:10px;padding:13px}.method h3{color:#1e40af}.method.smart h3{color:#6d28d9}
+canvas{width:100%;height:260px;display:block}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px;text-align:left;border-bottom:1px solid var(--border)}th{background:#f1f5f9}
+.flow{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}.node{background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:10px;text-align:center;min-width:125px;font-weight:700}.arrow{font-size:22px;color:#64748b}
+.status{padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-size:13px;margin-top:12px}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:10px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.compare{grid-template-columns:1fr}.card{padding:14px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>AI-Based Smart Retransmission System</h1><p>Software simulation of packet loss, ACK feedback, retransmission decisions, and performance comparison</p></div></header>
+<main>
+<section class="card">
+<h2>How the system works</h2>
+<div class="flow">
+<div class="node">Sender<br><small>Creates packets</small></div><span class="arrow">→</span>
+<div class="node">Network<br><small>Loss + delay</small></div><span class="arrow">→</span>
+<div class="node">Receiver<br><small>ACK / NACK</small></div><span class="arrow">↔</span>
+<div class="node">Decision model<br><small>Estimates loss risk</small></div>
+</div>
+<p class="note">The AI-inspired policy uses a logistic risk score based on configured loss, congestion, and recent outcomes. It adjusts its retransmission timeout; it does not replace ACK/NACK or ARQ.</p>
+</section>
+<div class="grid">
+<aside>
+<div class="card">
+<h2>Simulation settings</h2>
+<label for="packets">Number of packets <span class="value" id="packetsV">200</span></label>
+<input id="packets" type="range" min="50" max="1000" step="50" value="200">
+<label for="loss">Packet loss probability <span class="value" id="lossV">15%</span></label>
+<input id="loss" type="range" min="0" max="50" step="1" value="15">
+<label for="ackloss">ACK loss probability <span class="value" id="acklossV">5%</span></label>
+<input id="ackloss" type="range" min="0" max="30" step="1" value="5">
+<label for="delay">Average network delay <span class="value" id="delayV">300 ms</span></label>
+<input id="delay" type="range" min="50" max="1000" step="50" value="300">
+<label for="congestion">Network congestion <span class="value" id="congestionV">30%</span></label>
+<input id="congestion" type="range" min="0" max="100" step="5" value="30">
+<label for="seed">Random seed</label>
+<input id="seed" type="number" min="1" max="999999" value="42" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:7px">
+<button id="run">Run simulation</button><button class="secondary" id="reset">Reset defaults</button>
+<div class="note" style="margin-top:12px">Each run uses the same random seed for a fair comparison between the two policies. Change the seed to test another network scenario.</div>
+</div>
+</aside>
+<div>
+<div class="card">
+<h2>Performance summary</h2>
+<div class="metrics">
+<div class="metric"><div class="n" id="delivery">—</div><div class="t">Smart delivery ratio</div></div>
+<div class="metric"><div class="n" id="reduction">—</div><div class="t">Retransmissions saved</div></div>
+<div class="metric"><div class="n" id="delayMetric">—</div><div class="t">Smart average delay</div></div>
+<div class="metric"><div class="n" id="bandwidth">—</div><div class="t">Smart packets transmitted</div></div>
+</div>
+<div class="status" id="status">Set the parameters and select “Run simulation” to compare both methods.</div>
+</div>
+<div class="card">
+<h2>Baseline vs AI-based policy</h2>
+<div class="compare">
+<div class="method"><h3>Standard ARQ</h3><div id="baseStats" class="note">Run the simulation to see results.</div></div>
+<div class="method smart"><h3>AI-based smart ARQ</h3><div id="smartStats" class="note">Run the simulation to see results.</div></div>
+</div>
+</div>
+<div class="card"><h2>Comparison charts</h2><canvas id="chart" width="900" height="300" aria-label="Bar chart comparing baseline and smart method"></canvas><p class="note">Lower retransmissions and delay are generally desirable; a high delivery ratio is desirable. Results depend on simulated conditions and model assumptions.</p></div>
+<div class="card"><h2>Recent packet log (first 20 packets)</h2><div style="overflow-x:auto"><table><thead><tr><th>Packet</th><th>Network outcome</th><th>Standard attempts</th><th>Smart attempts</th><th>Smart decision</th></tr></thead><tbody id="log"><tr><td colspan="5">No run yet.</td></tr></tbody></table></div></div>
+</div>
+</div>
+<section class="card">
+<h2>What the project demonstrates</h2>
+<ul>
+<li>Packet delivery ratio = successfully delivered original packets ÷ total packets × 100%.</li>
+<li>Retransmissions = additional transmissions after the first attempt.</li>
+<li>Bandwidth usage is represented by total packet transmissions (original packets + retries).</li>
+<li>Average delay is a simplified simulated end-to-end delay, not a measurement from a real network.</li>
+<li>ACK means acknowledgement; NACK means negative acknowledgement; ARQ means Automatic Repeat reQuest.</li>
+</ul>
+<p class="note"><b>Academic honesty note:</b> this is a teaching simulation with a lightweight logistic risk heuristic, not a production-grade trained AI model or a real network benchmark. In your presentation, describe its assumptions and limitations clearly.</p>
+</section>
+</main>
+<footer>DCOM mini-project • Runs locally in your browser • No installation or internet connection required</footer>
+<script>
+const ids=['packets','loss','ackloss','delay','congestion'];
+function updateLabels(){document.getElementById('packetsV').textContent=document.getElementById('packets').value;document.getElementById('lossV').textContent=document.getElementById('loss').value+'%';document.getElementById('acklossV').textContent=document.getElementById('ackloss').value+'%';document.getElementById('delayV').textContent=document.getElementById('delay').value+' ms';document.getElementById('congestionV').textContent=document.getElementById('congestion').value+'%'}
+ids.forEach(id=>document.getElementById(id).addEventListener('input',updateLabels));
+function rng(seed){let s=seed>>>0;return ()=>{s=(s+0x6D2B79F5)>>>0;let t=s;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
+function sigmoid(x){return 1/(1+Math.exp(-x))}
+function simulate(cfg, smart, random){
+ let delivered=0, transmissions=0, retries=0, delaySum=0, rows=[];
+ for(let i=1;i<=cfg.n;i++){
+  const actualLoss=random()<cfg.loss;
+  const ackLost=random()<cfg.ackloss;
+  const congestionJitter=random()*cfg.congestion*cfg.avgDelay/100;
+  const actualDelay=cfg.avgDelay+congestionJitter+random()*cfg.avgDelay*.35;
+  // Model estimates the chance that silence indicates packet loss rather than delayed feedback.
+  const risk=sigmoid(-2.2+4.2*cfg.loss+1.5*cfg.congestion+(actualDelay/cfg.avgDelay-1)*1.4);
+  let attempts=1, success=!(actualLoss||ackLost), totalDelay=actualDelay, decision='ACK received';
+  transmissions++;
+  if(!success){
+    let retryNeeded=true;
+    if(smart){
+      // Risk-adaptive waiting: low estimated risk means wait for feedback; high risk triggers earlier retry.
+      const timeoutFactor=risk>.65?1.15:(risk>.4?1.45:1.9);
+      decision=risk>.65?'High risk: retry sooner':risk>.4?'Medium risk: balanced timeout':'Low risk: wait longer for feedback';
+      // In this simplified simulator, delayed ACK can arrive during the wait.
+      const delayedAckArrives=ackLost===false && !actualLoss && actualDelay<cfg.avgDelay*timeoutFactor;
+      if(delayedAckArrives){retryNeeded=false;success=true;decision='Delayed ACK arrived; avoided retry'}
+    }else{
+      decision='Fixed timeout / NACK rule';
+      // Fixed policy assumes feedback timeout at 1.5x nominal delay.
+      const delayedAckArrives=!actualLoss && !ackLost && actualDelay<cfg.avgDelay*1.5;
+      if(delayedAckArrives){retryNeeded=false;success=true}
+    }
+    if(retryNeeded){
+      while(!success && attempts<5){
+        attempts++; transmissions++; retries++;
+        const retryLost=random()<cfg.loss*.72;
+        const retryAckLost=random()<cfg.ackloss*.7;
+        const retryDelay=cfg.avgDelay*(1+random()*.35+cfg.congestion/300);
+        totalDelay+=retryDelay;
+        if(!retryLost&&!retryAckLost)success=true;
+      }
+    }
+  }
+  if(success){delivered++;delaySum+=totalDelay}
+  rows.push({i,outcome:actualLoss?'Packet lost':ackLost?'ACK lost':'Delivered',baseAttempts:null,smartAttempts:null,decision,success,delay:totalDelay});
+ }
+ return {delivered,delivery:100*delivered/cfg.n,transmissions,retries,avgDelay:delivered?delaySum/delivered:0,rows};
+}
+function draw(b,s){
+ const c=document.getElementById('chart'),ctx=c.getContext('2d'),W=c.width,H=c.height;ctx.clearRect(0,0,W,H);
+ const labels=['Delivery ratio (%)','Retransmissions','Avg delay (ms)','Total transmissions'];
+ const vals=[[b.delivery,s.delivery],[b.retries,s.retries],[b.avgDelay,s.avgDelay],[b.transmissions,s.transmissions]];
+ const maxes=vals.map(v=>Math.max(...v,1)*1.15), left=175, right=30, top=20, groupH=66, barH=16, plotW=W-left-right;
+ labels.forEach((lab,i)=>{let y=top+i*groupH;ctx.fillStyle='#334155';ctx.font='bold 14px Arial';ctx.fillText(lab,10,y+23);[b,s].forEach((r,j)=>{let val=vals[i][j],w=plotW*val/maxes[i],yy=y+j*barH;ctx.fillStyle=j?'#8b5cf6':'#3b82f6';ctx.fillRect(left,yy,w,barH-3);ctx.fillStyle='#0f172a';ctx.font='12px Arial';ctx.fillText((i===0?val.toFixed(1):val.toFixed(1)),left+w+6,yy+12)})});
+ ctx.fillStyle='#3b82f6';ctx.fillRect(W-190,H-22,12,12);ctx.fillStyle='#334155';ctx.fillText('Standard ARQ',W-173,H-12);ctx.fillStyle='#8b5cf6';ctx.fillRect(W-90,H-22,12,12);ctx.fillStyle='#334155';ctx.fillText('Smart',W-73,H-12);
+}
+function run(){
+ const cfg={n:+document.getElementById('packets').value,loss:+document.getElementById('loss').value/100,ackloss:+document.getElementById('ackloss').value/100,avgDelay:+document.getElementById('delay').value,congestion:+document.getElementById('congestion').value/100};
+ const seed=Math.max(1,+document.getElementById('seed').value||42);
+ // Generate a shared underlying scenario stream for fair comparison.
+ const r1=rng(seed), scenario=[];
+ for(let i=0;i<cfg.n*10;i++)scenario.push(r1());
+ let cursor=0;const shared=()=>scenario[cursor++%scenario.length];
+ const b=simulate(cfg,false,shared);
+ cursor=0;const s=simulate(cfg,true,shared);
+ // Populate the comparison log using paired approximate outcomes.
+ const log=document.getElementById('log');log.innerHTML='';
+ for(let i=0;i<Math.min(20,cfg.n);i++){const tr=document.createElement('tr');const br=b.rows[i],sr=s.rows[i];tr.innerHTML=`<td>${i+1}</td><td>${br.outcome}</td><td>${Math.min(5,br.success?1:5)} (max 5)</td><td>${sr.success?1:'up to 5'}</td><td>${sr.decision}</td>`;log.appendChild(tr)}
+ document.getElementById('delivery').textContent=s.delivery.toFixed(1)+'%';
+ const saved=b.retries?100*(b.retries-s.retries)/b.retries:0;
+ document.getElementById('reduction').textContent=(saved>=0?'':'−')+Math.abs(saved).toFixed(1)+'%';
+ document.getElementById('delayMetric').textContent=s.avgDelay.toFixed(0)+' ms';
+ document.getElementById('bandwidth').textContent=s.transmissions;
+ document.getElementById('baseStats').innerHTML=`<b>Delivery:</b> ${b.delivery.toFixed(1)}%<br><b>Retransmissions:</b> ${b.retries}<br><b>Total transmissions:</b> ${b.transmissions}<br><b>Average successful-packet delay:</b> ${b.avgDelay.toFixed(1)} ms`;
+ document.getElementById('smartStats').innerHTML=`<b>Delivery:</b> ${s.delivery.toFixed(1)}%<br><b>Retransmissions:</b> ${s.retries}<br><b>Total transmissions:</b> ${s.transmissions}<br><b>Average successful-packet delay:</b> ${s.avgDelay.toFixed(1)} ms`;
+ document.getElementById('status').textContent=`Simulation complete: ${cfg.n} packets, ${(cfg.loss*100).toFixed(0)}% packet-loss setting, ${(cfg.ackloss*100).toFixed(0)}% ACK-loss setting. Compare all metrics rather than assuming the smart method always wins.`;
+ draw(b,s);
+}
+document.getElementById('run').addEventListener('click',run);
+document.getElementById('reset').addEventListener('click',()=>{document.getElementById('packets').value=200;document.getElementById('loss').value=15;document.getElementById('ackloss').value=5;document.getElementById('delay').value=300;document.getElementById('congestion').value=30;document.getElementById('seed').value=42;updateLabels();});
+updateLabels();
+</script>
+</body></html>
